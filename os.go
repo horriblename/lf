@@ -241,3 +241,12 @@ func diskFree(wd string) string {
 	// Available blocks * size per block = available space in bytes
 	return " df: " + humanize(int64(uint64(stat.Bavail)*uint64(stat.Bsize)))
 }
+
+func getTermPixels() (w, h int, err error) {
+	fd := int(os.Stdin.Fd())
+	ws, err := unix.IoctlGetWinsize(fd, unix.TIOCGWINSZ)
+	if err != nil {
+		return -1, -1, err
+	}
+	return int(ws.Xpixel), int(ws.Ypixel), nil
+}

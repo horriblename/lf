@@ -200,3 +200,7 @@ func diskFree(wd string) string {
 	}
 	return " df: " + humanize(int64(free))
 }
+
+func getTermPixels() (w, h int, err error) {
+	return -1, -1, nil
+}
