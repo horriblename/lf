@@ -204,4 +204,3 @@ func diskFree(wd string) string {
 func getTermPixels() (w, h int, err error) {
 	return -1, -1, nil
 }
-
