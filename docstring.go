@@ -155,6 +155,7 @@ The following options can be used to customize the behavior of lf:
     ratios           []int     (default '1:2:3')
     relativenumber   bool      (default false)
     reverse          bool      (default false)
+    ruler            []string  (default 'acc:progress:selection:ind')
     scrolloff        int       (default 0)
     selmode          string    (default 'all')
     shell            string    (default 'sh' for Unix and 'cmd' for Windows)
@@ -871,6 +872,11 @@ current line shows the absolute position, otherwise nothing is shown.
     reverse        bool      (default false)
 
 Reverse the direction of sort.
+
+    ruler          []string  (default 'acc:progress:selection:ind')
+
+List of information shown in status line ruler. Currently supported information
+types are 'acc', 'progress', 'selection', 'ind' and 'df'.
 
     selmode        string    (default 'all')
 

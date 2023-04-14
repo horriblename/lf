@@ -470,10 +470,11 @@ func (nav *nav) checkDir(dir *dir) {
 		dir.ignorecase != gOpts.ignorecase ||
 		dir.ignoredia != gOpts.ignoredia:
 		dir.loading = true
+		sd := *dir
 		go func() {
-			dir.sort()
-			dir.loading = false
-			nav.dirChan <- dir
+			sd.sort()
+			sd.loading = false
+			nav.dirChan <- &sd
 		}()
 	}
 }
@@ -998,11 +999,13 @@ func (nav *nav) down(dist int) bool {
 	dir.ind = min(maxind, dir.ind)
 
 	dir.pos += dist
-	edge := min(min(nav.height/2, gOpts.scrolloff), maxind-dir.ind)
-
-	// use a smaller value when the height is even and scrolloff is maxed
-	// in order to stay at the same row as much as possible while up/down
-	edge = min(edge, nav.height/2+nav.height%2-1)
+	// use a smaller value for half when the height is even and scrolloff is
+	// maxed in order to stay at the same row while scrolling up and down
+	half := nav.height / 2
+	if nav.height%2 == 0 {
+		half--
+	}
+	edge := min(min(half, gOpts.scrolloff), maxind-dir.ind)
 
 	dir.pos = min(dir.pos, nav.height-edge-1)
 	dir.pos = min(dir.pos, maxind)
