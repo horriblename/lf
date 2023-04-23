@@ -490,7 +490,7 @@ func (e *setExpr) eval(app *app, args []string) {
 		toks := strings.Split(e.val, ":")
 		for _, s := range toks {
 			switch s {
-			case "df", "acc", "progress", "selection", "ind", "tot":
+			case "df", "acc", "progress", "selection", "ind":
 			default:
 				app.ui.echoerr("ruler: should consist of 'df', 'acc', 'progress', 'selection', or 'ind' separated with colon")
 				return
@@ -692,7 +692,13 @@ func (e *setExpr) eval(app *app, args []string) {
 		}
 		gOpts.scrolloff = n
 	case "selmode":
-		gOpts.selmode = e.val
+		switch e.val {
+		case "all", "dir":
+			gOpts.selmode = e.val
+		default:
+			app.ui.echoerr("selmode: value should either be 'all' or 'dir'")
+			return
+		}
 	case "shell":
 		gOpts.shell = e.val
 	case "shellflag":

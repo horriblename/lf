@@ -240,7 +240,7 @@ func diskFree(wd string) string {
 	}
 
 	// Available blocks * size per block = available space in bytes
-	return " df: " + humanize(int64(uint64(stat.Bavail)*uint64(stat.Bsize)))
+	return "df: " + humanize(int64(uint64(stat.Bavail)*uint64(stat.Bsize)))
 }
 
 func getTermPixels() (w, h int, err error) {

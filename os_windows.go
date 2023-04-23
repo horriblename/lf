@@ -198,7 +198,7 @@ func diskFree(wd string) string {
 		log.Printf("diskfree: %s", err)
 		return ""
 	}
-	return " df: " + humanize(int64(free))
+	return "df: " + humanize(int64(free))
 }
 
 func getTermPixels() (w, h int, err error) {
