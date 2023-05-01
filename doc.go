@@ -851,7 +851,7 @@ List of shell options to pass to the shell executable.
 
 	sixel          bool      (default false)
 
-Render sixel images in preview
+Render sixel images in preview.
 
 	smartcase      bool      (default true)
 
