@@ -173,6 +173,9 @@ var (
 		"noreverse",
 		"reverse!",
 		"ruler",
+		"sixel",
+		"nosixel",
+		"sixel!",
 		"smartcase",
 		"nosmartcase",
 		"smartcase!",
@@ -212,9 +215,6 @@ var (
 		"infotimefmtnew",
 		"infotimefmtold",
 		"truncatechar",
-		"sixel",
-		"nosixel",
-		"sixel!",
 	}
 )
 
