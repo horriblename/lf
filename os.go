@@ -250,3 +250,12 @@ func getTermPixels() (w, h int, err error) {
 	}
 	return int(ws.Xpixel), int(ws.Ypixel), nil
 }
+
+func getTermPixels() (w, h int, err error) {
+	fd := int(os.Stdin.Fd())
+	ws, err := unix.IoctlGetWinsize(fd, unix.TIOCGWINSZ)
+	if err != nil {
+		return -1, -1, err
+	}
+	return int(ws.Xpixel), int(ws.Ypixel), nil
+}

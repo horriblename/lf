@@ -215,6 +215,9 @@ var (
 		"infotimefmtnew",
 		"infotimefmtold",
 		"truncatechar",
+		"sixel",
+		"nosixel",
+		"sixel!",
 	}
 )
 
