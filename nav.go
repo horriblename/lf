@@ -26,6 +26,8 @@ const (
 	broken
 )
 
+const gPreviewerMaxLineSize int = 5242880 // 5 MB
+
 type file struct {
 	os.FileInfo
 	linkState  linkState
@@ -799,6 +801,7 @@ func (nav *nav) preview(path string, sxScreen *sixelScreen, win *win) {
 	}
 
 	buf := bufio.NewScanner(reader)
+	buf.Buffer(make([]byte, 0), gPreviewerMaxLineSize)
 
 	var sixelBuffer []string
 	processingSixel := false
