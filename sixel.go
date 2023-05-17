@@ -17,7 +17,7 @@ const (
 )
 
 var (
-	errInvalidSixel = errors.New("Invalid sixel sequence")
+	errInvalidSixel = errors.New("invalid sixel sequence")
 	gSixelFiller    = '\u2800'
 )
 
