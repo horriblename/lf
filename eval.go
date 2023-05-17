@@ -874,7 +874,7 @@ func (e *setExpr) eval(app *app, args []string) {
 			app.ui.echoerrf("sixel!: unexpected value: %s", e.val)
 			return
 		}
-		gOpts.sixel= !gOpts.sixel
+		gOpts.sixel = !gOpts.sixel
 	default:
 		// any key with the prefix user_ is accepted as a user defined option
 		if strings.HasPrefix(e.opt, "user_") {
