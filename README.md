@@ -10,8 +10,7 @@ Sixel support requires a sixel-capable terminal and is only available on Unix sy
 
 Sixel sequences can be passed directly to lf for displaying, cleaning, and caching. An example config based on cirala's lfimg can be found [here](https://github.com/horriblename/lfimg-sixel). For those managing their own previewer:
 
-- use `chafa "$1" -f sixel -s "$(($2-2))x$3" | sed 's/#/\n#/g'` in your previewer script
-- we need to pipe chafa's output into `sed 's/#/\n#/g'` as sixels can be too long for lf-sixel to handle internally
+- use `chafa "$1" -f sixel -s "$(($2-2))x$3"` in your previewer script
 - remember to use `exit 0`, any other exit code indicates that the user's previewer and cleaner scripts will handle cleaning and caching.
 - you **don't** need a cleaner script for sixel previewing
 
