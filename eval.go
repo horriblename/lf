@@ -58,6 +58,8 @@ func (e *setExpr) eval(app *app, args []string) {
 			return
 		}
 		gOpts.autoquit = !gOpts.autoquit
+	case "borderfmt":
+		gOpts.borderfmt = e.val
 	case "cleaner":
 		gOpts.cleaner = replaceTilde(e.val)
 	case "cursoractivefmt":
@@ -490,13 +492,28 @@ func (e *setExpr) eval(app *app, args []string) {
 		toks := strings.Split(e.val, ":")
 		for _, s := range toks {
 			switch s {
-			case "df", "acc", "progress", "selection", "ind":
+			case "df", "acc", "progress", "selection", "filter", "ind":
 			default:
-				app.ui.echoerr("ruler: should consist of 'df', 'acc', 'progress', 'selection', or 'ind' separated with colon")
+				app.ui.echoerr("ruler: should consist of 'df', 'acc', 'progress', 'selection', 'filter' or 'ind' separated with colon")
 				return
 			}
 		}
 		gOpts.ruler = toks
+	case "preserve":
+		if e.val == "" {
+			gOpts.preserve = nil
+			return
+		}
+		toks := strings.Split(e.val, ":")
+		for _, s := range toks {
+			switch s {
+			case "mode", "timestamps":
+			default:
+				app.ui.echoerr("preserve: should consist of 'mode' or 'timestamps separated with colon")
+				return
+			}
+		}
+		gOpts.preserve = toks
 	case "infotimefmtnew":
 		gOpts.infotimefmtnew = e.val
 	case "infotimefmtold":
@@ -945,6 +962,11 @@ func doComplete(app *app) (matches []string) {
 
 func menuComplete(app *app, dir int) {
 	if !app.menuCompActive {
+		toks := tokenize(string(app.ui.cmdAccLeft))
+		for i, tok := range toks {
+			toks[i] = replaceTilde(tok)
+		}
+		app.ui.cmdAccLeft = []rune(strings.Join(toks, " "))
 		app.ui.cmdTmp = app.ui.cmdAccLeft
 		app.menuComps = doComplete(app)
 		if len(app.menuComps) > 1 {
@@ -1447,7 +1469,7 @@ func (e *callExpr) eval(app *app, args []string) {
 			return
 		}
 		var moved bool
-		if e.count == 0 {
+		if e.count == 1 {
 			moved = app.nav.top()
 		} else {
 			moved = app.nav.move(e.count - 1)
@@ -1461,7 +1483,9 @@ func (e *callExpr) eval(app *app, args []string) {
 			return
 		}
 		var moved bool
-		if e.count == 0 {
+		if e.count == 1 {
+			// Different from Vim, which would treat a count of 1 as meaning to
+			// move to the first line (i.e. the top)
 			moved = app.nav.bottom()
 		} else {
 			moved = app.nav.move(e.count - 1)
@@ -2501,15 +2525,11 @@ func (e *callExpr) eval(app *app, args []string) {
 		app.ui.cmdAccLeft = acc
 		update(app)
 	case "maps":
-		cleanUp := app.runShell(envPager, nil, "$|")
-		io.Copy(app.cmdIn, listBinds(gOpts.keys))
-		app.cmdIn.Close()
-		cleanUp()
+		app.runPagerOnText(listBinds(gOpts.keys))
 	case "cmaps":
-		cleanUp := app.runShell(envPager, nil, "$|")
-		io.Copy(app.cmdIn, listBinds(gOpts.cmdkeys))
-		app.cmdIn.Close()
-		cleanUp()
+		app.runPagerOnText(listBinds(gOpts.cmdkeys))
+	case "jumps":
+		app.runPagerOnText(listJumps(app.nav.jumpList, app.nav.jumpListInd))
 	default:
 		cmd, ok := gOpts.cmds[e.name]
 		if !ok {

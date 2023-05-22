@@ -29,6 +29,7 @@ var (
 		"open",
 		"jump-next",
 		"jump-prev",
+		"jumps",
 		"top",
 		"bottom",
 		"high",
@@ -115,6 +116,7 @@ var (
 		"autoquit",
 		"noautoquit",
 		"autoquit!",
+		"borderfmt",
 		"cursoractivefmt",
 		"cursorparentfmt",
 		"cursorpreviewfmt",
@@ -173,6 +175,7 @@ var (
 		"noreverse",
 		"reverse!",
 		"ruler",
+		"preserve",
 		"smartcase",
 		"nosmartcase",
 		"smartcase!",
@@ -333,7 +336,7 @@ func matchFile(s string) (matches []string, longest []rune) {
 		if isRoot(s) || filepath.Base(s) != s {
 			name = filepath.Join(filepath.Dir(unescape(s)), f.Name())
 		}
-		name = escape(name)
+		name = escape(replaceTilde(name))
 
 		item := f.Name()
 		if f.Mode().IsDir() {

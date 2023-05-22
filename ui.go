@@ -851,10 +851,6 @@ func (ui *ui) drawStatLine(nav *nav) {
 		selection = append(selection, fmt.Sprintf("\033[35;7m %d \033[0m", len(currSelections)))
 	}
 
-	if len(dir.filter) != 0 {
-		selection = append(selection, "\033[34;7m F \033[0m")
-	}
-
 	progress := []string{}
 
 	if nav.copyTotal > 0 {
@@ -884,6 +880,10 @@ func (ui *ui) drawStatLine(nav *nav) {
 			ruler = append(ruler, progress...)
 		case "selection":
 			ruler = append(ruler, selection...)
+		case "filter":
+			if len(dir.filter) != 0 {
+				ruler = append(ruler, "\033[34;7m F \033[0m")
+			}
 		case "ind":
 			ruler = append(ruler, fmt.Sprintf("%d/%d", ind, tot))
 		}
@@ -894,7 +894,7 @@ func (ui *ui) drawStatLine(nav *nav) {
 }
 
 func (ui *ui) drawBox() {
-	st := tcell.StyleDefault
+	st := parseEscapeSequence(gOpts.borderfmt)
 
 	w, h := ui.screen.Size()
 
@@ -1072,6 +1072,30 @@ func listBinds(binds map[string]expr) *bytes.Buffer {
 	return b
 }
 
+func listJumps(jumps []string, ind int) *bytes.Buffer {
+	t := new(tabwriter.Writer)
+	b := new(bytes.Buffer)
+
+	maxlength := len(strconv.Itoa(max(ind, len(jumps)-1-ind)))
+
+	t.Init(b, 0, gOpts.tabstop, 2, '\t', 0)
+	fmt.Fprintln(t, "  jump\tpath")
+	// print jumps in order of most recent, Vim uses the opposite order
+	for i := len(jumps) - 1; i >= 0; i-- {
+		switch {
+		case i < ind:
+			fmt.Fprintf(t, "  %*d\t%s\n", maxlength, ind-i, jumps[i])
+		case i > ind:
+			fmt.Fprintf(t, "  %*d\t%s\n", maxlength, i-ind, jumps[i])
+		default:
+			fmt.Fprintf(t, "> %*d\t%s\n", maxlength, 0, jumps[i])
+		}
+	}
+	t.Flush()
+
+	return b
+}
+
 func listMarks(marks map[string]string) *bytes.Buffer {
 	t := new(tabwriter.Writer)
 	b := new(bytes.Buffer)
@@ -1097,36 +1121,63 @@ func (ui *ui) pollEvent() tcell.Event {
 	case val := <-ui.keyChan:
 		var ch rune
 		var mod tcell.ModMask
-
 		k := tcell.KeyRune
 
-		if utf8.RuneCountInString(val) == 1 {
+		if key, ok := gValKey[val]; ok {
+			return tcell.NewEventKey(key, ch, mod)
+		}
+
+		switch {
+		case utf8.RuneCountInString(val) == 1:
 			ch, _ = utf8.DecodeRuneInString(val)
-		} else {
-			switch {
-			case val == "<lt>":
-				ch = '<'
-			case val == "<gt>":
-				ch = '>'
-			case val == "<space>":
-				ch = ' '
-			case reAltKey.MatchString(val):
-				match := reAltKey.FindStringSubmatch(val)[1]
-				ch, _ = utf8.DecodeRuneInString(match)
-				mod = tcell.ModMask(tcell.ModAlt)
-			default:
-				if key, ok := gValKey[val]; ok {
-					k = key
-				} else {
-					k = tcell.KeyESC
-					ui.echoerrf("unknown key: %s", val)
-				}
+		case val == "<lt>":
+			ch = '<'
+		case val == "<gt>":
+			ch = '>'
+		case val == "<space>":
+			ch = ' '
+		case reModKey.MatchString(val):
+			matches := reModKey.FindStringSubmatch(val)
+			switch matches[1] {
+			case "c":
+				mod = tcell.ModCtrl
+			case "s":
+				mod = tcell.ModShift
+			case "a":
+				mod = tcell.ModAlt
 			}
+			val = matches[2]
+			if utf8.RuneCountInString(val) == 1 {
+				ch, _ = utf8.DecodeRuneInString(val)
+				break
+			} else if key, ok := gValKey["<"+val+">"]; ok {
+				k = key
+				break
+			}
+			fallthrough
+		default:
+			k = tcell.KeyESC
+			ui.echoerrf("unknown key: %s", val)
 		}
 
 		return tcell.NewEventKey(k, ch, mod)
 	case ev := <-ui.tevChan:
 		return ev
+	}
+}
+
+func addSpecialKeyModifier(val string, mod tcell.ModMask) string {
+	switch {
+	case !strings.HasPrefix(val, "<"):
+		return val
+	case mod == tcell.ModCtrl && !strings.HasPrefix(val, "<c-"):
+		return "<c-" + val[1:]
+	case mod == tcell.ModShift:
+		return "<s-" + val[1:]
+	case mod == tcell.ModAlt:
+		return "<a-" + val[1:]
+	default:
+		return val
 	}
 }
 
@@ -1157,6 +1208,7 @@ func (ui *ui) readNormalEvent(ev tcell.Event, nav *nav) expr {
 			}
 		} else {
 			val := gKeyVal[tev.Key()]
+			val = addSpecialKeyModifier(val, tev.Modifiers())
 			if val == "<esc>" && string(ui.keyAcc) != "" {
 				ui.keyAcc = nil
 				ui.keyCount = nil
@@ -1324,6 +1376,7 @@ func readCmdEvent(ev tcell.Event) expr {
 			}
 		} else {
 			val := gKeyVal[tev.Key()]
+			val = addSpecialKeyModifier(val, tev.Modifiers())
 			if expr, ok := gOpts.cmdkeys[val]; ok {
 				return expr
 			}

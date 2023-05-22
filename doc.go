@@ -81,6 +81,7 @@ The following commands are provided by lf:
 	tag-toggle               (default 't')
 	maps
 	cmaps
+	jumps
 
 The following command line commands are provided by lf:
 
@@ -116,6 +117,7 @@ The following options can be used to customize the behavior of lf:
 
 	anchorfind       bool      (default true)
 	autoquit         bool      (default false)
+	borderfmt        string    (default "\033[0m")
 	cleaner          string    (default '')
 	cursoractivefmt  string    (default "\033[7m")
 	cursorparentfmt  string    (default "\033[7m")
@@ -146,13 +148,14 @@ The following options can be used to customize the behavior of lf:
 	number           bool      (default false)
 	numberfmt        string    (default "\033[33m")
 	period           int       (default 0)
+	preserve         []string  (default "mode")
 	preview          bool      (default true)
 	previewer        string    (default '')
 	promptfmt        string    (default "\033[32;1m%u@%h\033[0m:\033[34;1m%d\033[0m\033[1m%f\033[0m")
 	ratios           []int     (default '1:2:3')
 	relativenumber   bool      (default false)
 	reverse          bool      (default false)
-	ruler            []string  (default 'acc:progress:selection:ind')
+	ruler            []string  (default 'acc:progress:selection:filter:ind')
 	scrolloff        int       (default 0)
 	selmode          string    (default 'all')
 	shell            string    (default 'sh' for Unix and 'cmd' for Windows)
@@ -281,10 +284,14 @@ History file should be located at:
 
 You can configure the default values of following variables to change these locations:
 
-	$XDG_CONFIG_HOME  ~/.config
-	$XDG_DATA_HOME    ~/.local/share
-	%ProgramData%     C:\ProgramData
-	%LOCALAPPDATA%    C:\Users\<user>\AppData\Local
+	Unix
+	    $XDG_CONFIG_HOME  ~/.config
+	    $XDG_DATA_HOME    ~/.local/share
+
+	Windows
+	    %ProgramData%     C:\ProgramData
+	    %LOCALAPPDATA%    C:\Users\<user>\AppData\Local
+	    %LF_CONFIG_HOME%  If set, use this value instead of %LOCALAPPDATA%
 
 A sample configuration file can be found at
 https://github.com/gokcehan/lf/blob/master/etc/lfrc.example
@@ -613,6 +620,12 @@ Capitalize/uppercase/lowercase the current word and jump to the next word.
 
 List all key mappings in normal mode or command-line editing mode.
 
+	jumps
+
+List the contents of the jump list, in order of the most recently visited locations.
+Each location is marked with the count that can be used with the `jump-prev` and `jump-next` commands (e.g. use `3[` to move three spaces backwards in the jump list).
+A '>' is used to mark the current location in the jump list.
+
 # Options
 
 This section shows information about options to customize the behavior.
@@ -625,6 +638,10 @@ When this option is enabled, find command starts matching patterns from the begi
 	autoquit       bool      (default false)
 
 Automatically quit server when there are no clients left connected.
+
+	borderfmt      string    (default "\033[0m")
+
+Format string of the box drawing characters enabled by the `drawbox` option.
 
 	cleaner        string    (default '') (not called if empty)
 
@@ -781,6 +798,12 @@ Note that directories are already updated automatically in many cases.
 This option can be useful when there is an external process changing the displayed directory and you are not doing anything in lf.
 Periodic checks are disabled when the value of this option is set to zero.
 
+	preserve       []string  (default 'mode')
+
+List of attributes that are preserved when copying files.
+Currently supported attributes are 'mode' (i.a. access mode) and 'timestamps' (i.e. modification time and access time).
+Note: Preserving other attribute like ownership of change/birth timestamp is desireable, but not portably supported in go.
+
 	preview        bool      (default true)
 
 Show previews of files and directories at the right most pane.
@@ -819,10 +842,16 @@ When 'number' is enabled, current line shows the absolute position, otherwise no
 
 Reverse the direction of sort.
 
-	ruler          []string  (default 'acc:progress:selection:ind')
+	ruler          []string  (default 'acc:progress:selection:filter:ind')
 
 List of information shown in status line ruler.
 Currently supported information types are 'acc', 'progress', 'selection', 'ind' and 'df'.
+`acc` shows the pressed keys (e.g. for bindings with multiple key presses or counts given to bindings).
+`progress` shows the progress of file operations (e.g. copying a large directory).
+`selection` shows the number of files that are selected, or designated for being cut/copied.
+`filter` shows 'F' if a filter is currently being applied.
+`ind` shows the current position of the cursor as well as the number of files in the current directory.
+`df` shows the amount of free disk space remaining.
 
 	selmode        string    (default 'all')
 
@@ -1129,8 +1158,13 @@ On these terminals, keys combined with the alt key are prefixed with 'a' charact
 
 	map <a-a> down
 
-Please note that, some key combinations are not possible due to the way terminals work (e.g. control and h combination sends a backspace key instead).
-The easiest way to find the name of a key combination is to press the key while lf is running and read the name of the key from the unknown mapping error.
+It is possible to combine special keys with modifiers:
+
+	map <a-enter> down
+
+WARNING: Some key combinations will likely be intercepted by your OS, window manager, or terminal.
+Other key combinations cannot be recognized by lf due to the way terminals work (e.g. `Ctrl+h` combination sends a backspace key instead).
+The easiest way to find out the name of a key combination and whether it will work on your system is to press the key while lf is running and read the name from the "unknown mapping" error.
 
 Mouse buttons are prefixed with 'm' character:
 
@@ -1308,7 +1342,7 @@ lf uses its own builtin copy and move operations by default.
 These are implemented as asynchronous operations and progress is shown in the bottom ruler.
 These commands do not overwrite existing files or directories with the same name.
 Instead, a suffix that is compatible with '--backup=numbered' option in GNU cp is added to the new files or directories.
-Only file modes are preserved and all other attributes are ignored including ownership, timestamps, context, and xattr.
+Only file modes and (some) timestamps can be preserved (see `preserve` option), all other attributes are ignored including ownership, context, and xattr.
 Special files such as character and block devices, named pipes, and sockets are skipped and links are not followed.
 Moving is performed using the rename operation of the underlying OS.
 For cross-device moving, lf falls back to copying and then deletes the original files if there are no errors.

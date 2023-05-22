@@ -30,6 +30,7 @@ type sortType struct {
 var gOpts struct {
 	anchorfind       bool
 	autoquit         bool
+	borderfmt        string
 	cursoractivefmt  string
 	cursorparentfmt  string
 	cursorpreviewfmt string
@@ -75,6 +76,7 @@ var gOpts struct {
 	history          bool
 	info             []string
 	ruler            []string
+	preserve         []string
 	shellopts        []string
 	keys             map[string]expr
 	cmdkeys          map[string]expr
@@ -94,6 +96,7 @@ func init() {
 	gOpts.dironly = false
 	gOpts.dirpreviews = false
 	gOpts.drawbox = false
+	gOpts.borderfmt = "\033[0m"
 	gOpts.cursoractivefmt = "\033[7m"
 	gOpts.cursorparentfmt = "\033[7m"
 	gOpts.cursorpreviewfmt = "\033[4m"
@@ -133,7 +136,8 @@ func init() {
 	gOpts.hiddenfiles = []string{".*"}
 	gOpts.history = true
 	gOpts.info = nil
-	gOpts.ruler = []string{"acc", "progress", "selection", "ind"}
+	gOpts.ruler = []string{"acc", "progress", "selection", "filter", "ind"}
+	gOpts.preserve = []string{"mode"}
 	gOpts.shellopts = nil
 	gOpts.sortType = sortType{naturalSort, dirfirstSort}
 	gOpts.tempmarks = "'"
@@ -163,10 +167,10 @@ func init() {
 	gOpts.keys["l"] = &callExpr{"open", nil, 1}
 	gOpts.keys["<right>"] = &callExpr{"open", nil, 1}
 	gOpts.keys["q"] = &callExpr{"quit", nil, 1}
-	gOpts.keys["gg"] = &callExpr{"top", nil, 0}
-	gOpts.keys["<home>"] = &callExpr{"top", nil, 0}
-	gOpts.keys["G"] = &callExpr{"bottom", nil, 0}
-	gOpts.keys["<end>"] = &callExpr{"bottom", nil, 0}
+	gOpts.keys["gg"] = &callExpr{"top", nil, 1}
+	gOpts.keys["<home>"] = &callExpr{"top", nil, 1}
+	gOpts.keys["G"] = &callExpr{"bottom", nil, 1}
+	gOpts.keys["<end>"] = &callExpr{"bottom", nil, 1}
 	gOpts.keys["H"] = &callExpr{"high", nil, 1}
 	gOpts.keys["M"] = &callExpr{"middle", nil, 1}
 	gOpts.keys["L"] = &callExpr{"low", nil, 1}
