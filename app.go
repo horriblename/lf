@@ -526,7 +526,7 @@ func (app *app) runShell(s string, args []string, prefix string) {
 		return
 	}
 
-	// We are running the command asynchroniously
+	// We are running the command asynchronously
 	if prefix == "%" {
 		if app.ui.cmdPrefix == ">" {
 			return
@@ -548,12 +548,6 @@ func (app *app) runShell(s string, args []string, prefix string) {
 	if err = cmd.Start(); err != nil {
 		app.ui.echoerrf("running shell: %s", err)
 	}
-
-	// Asynchronous shell invocations return immediately without waiting for the
-	// command to finish, so there is no point refreshing the preview if nothing
-	// has changed yet.
-	volatile := prefix != "&"
-	app.ui.loadFile(app, volatile)
 
 	switch prefix {
 	case "%":
@@ -602,26 +596,16 @@ func (app *app) runShell(s string, args []string, prefix string) {
 
 }
 
-func (app *app) runPagerOnText(text io.Reader) {
+func (app *app) runPagerOn(stdin io.Reader) {
 	app.nav.exportFiles()
 	app.ui.exportSizes()
 	exportOpts()
 
 	cmd := shellCommand(envPager, nil)
 
+	cmd.Stdin = stdin
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
-
-	stdin, err := cmd.StdinPipe()
-	if err != nil {
-		app.ui.echoerrf("obtaining stdin pipe: %s", err)
-		return
-	}
-
-	go func() {
-		io.Copy(stdin, text)
-		stdin.Close()
-	}()
 
 	app.runCmdSync(cmd, false)
 }

@@ -41,6 +41,7 @@ The following commands are provided by lf:
 	glob-select
 	glob-unselect
 	calcdirsize
+	clearmaps
 	copy                     (default 'y')
 	cut                      (default 'd')
 	paste                    (default 'p')
@@ -81,6 +82,7 @@ The following commands are provided by lf:
 	tag-toggle               (default 't')
 	maps
 	cmaps
+	cmds
 	jumps
 
 The following command line commands are provided by lf:
@@ -164,6 +166,7 @@ The following options can be used to customize the behavior of lf:
 	smartcase        bool      (default true)
 	smartdia         bool      (default false)
 	sortby           string    (default 'natural')
+	statfmt          string    (default "\033[36m%p\033[0m %c %u %g %s %t %L")
 	tabstop          int       (default 8)
 	tagfmt           string    (default "\033[31m")
 	tempmarks        string    (default '')
@@ -208,11 +211,13 @@ The following special shell commands are used to customize the behavior of lf wh
 
 The following commands/keybindings are provided by default:
 
-	Unix                     Windows
-	cmd open &$OPENER "$f"   cmd open &%OPENER% %f%
-	map e $$EDITOR "$f"      map e $%EDITOR% %f%
-	map i $$PAGER "$f"       map i !%PAGER% %f%
-	map w $$SHELL            map w $%SHELL%
+	Unix                          Windows
+	cmd open &$OPENER "$f"        cmd open &%OPENER% %f%
+	map e $$EDITOR "$f"           map e $%EDITOR% %f%
+	map i $$PAGER "$f"            map i !%PAGER% %f%
+	map w $$SHELL                 map w $%SHELL%
+	cmd doc $$lf -doc | $PAGER    cmd doc !%lf% -doc | %PAGER%
+	map <f-1> doc                 map <f-1> doc
 
 The following additional keybindings are provided by default:
 
@@ -378,6 +383,12 @@ Select/unselect files that match the given glob.
 Calculate the total size for each of the selected directories.
 Option 'info' should include 'size' and option 'dircounts' should be disabled to show this size.
 If the total size of a directory is not calculated, it will be shown as '-'.
+
+	clearmaps
+
+Remove all keybindings associated with the `map` command.
+This command can be used in the config file to remove the default keybindings.
+For safety purposes, `:` is left mapped to the `read` command, and `cmap` keybindings are retained so that it is still possible to exit `lf` using `:quit`.
 
 	copy                     (default 'y')
 
@@ -620,6 +631,10 @@ Capitalize/uppercase/lowercase the current word and jump to the next word.
 
 List all key mappings in normal mode or command-line editing mode.
 
+	cmds
+
+List all custom commands defined using the `cmd` command
+
 	jumps
 
 List the contents of the jump list, in order of the most recently visited locations.
@@ -845,13 +860,15 @@ Reverse the direction of sort.
 	ruler          []string  (default 'acc:progress:selection:filter:ind')
 
 List of information shown in status line ruler.
-Currently supported information types are 'acc', 'progress', 'selection', 'ind' and 'df'.
+Currently supported information types are 'acc', 'progress', 'selection', 'filter', 'ind', 'df' and names starting with 'lf_'.
 `acc` shows the pressed keys (e.g. for bindings with multiple key presses or counts given to bindings).
 `progress` shows the progress of file operations (e.g. copying a large directory).
 `selection` shows the number of files that are selected, or designated for being cut/copied.
 `filter` shows 'F' if a filter is currently being applied.
 `ind` shows the current position of the cursor as well as the number of files in the current directory.
 `df` shows the amount of free disk space remaining.
+Names starting with `lf_` show the value of environment variables exported by lf. This is useful for displaying the current settings (e.g. `lf_selmode` displays the current setting for the `selmode` option).
+User defined options starting with `lf_user_` are also supported, so it is possible to display information set from external sources.
 
 	selmode        string    (default 'all')
 
@@ -892,6 +909,12 @@ This option has no effect when 'ignoredia' is disabled.
 
 Sort type for directories.
 Currently supported sort types are 'natural', 'name', 'size', 'time', 'ctime', 'atime', and 'ext'.
+
+	statfmt    string    (default "\033[36m%p\033[0m %c %u %g %s %t %L")
+
+Format string of the file info shown in the bottom left corner.
+Special expansions are provided, '%p' as the file permissions, '%c' as the link count, '%u' as the user, '%g' as the group, '%s' as the file size, '%t' as the last modified time, and '%l' as the link target if it exists (otherwise a blank string). '%L' is the same as '%l' but with an arrow '-> ' prepended.
+On Windows, the link count, user and group fields are not supported and will be replaced with a blank string if specified. The default for Windows is "\033[36m%p\033[0m %s %t %L".
 
 	tabstop        int       (default 8)
 

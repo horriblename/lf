@@ -448,8 +448,16 @@ func (win *win) printDir(screen tcell.Screen, dir *dir, context *dirContext, dir
 			}
 		}
 
+		// make space for select marker, and leave another space at the end
+		maxWidth := win.w - lnwidth - 2
+		// make extra space to separate windows if drawbox is not enabled
+		if !gOpts.drawbox {
+			maxWidth -= 1
+		}
+
 		var s []rune
 
+		// leave space for displaying the tag
 		s = append(s, ' ')
 
 		if gOpts.icons {
@@ -457,40 +465,26 @@ func (win *win) printDir(screen tcell.Screen, dir *dir, context *dirContext, dir
 			s = append(s, ' ')
 		}
 
-		for _, r := range f.Name() {
-			s = append(s, r)
-		}
-
-		w := runeSliceWidth(s)
-
-		// make space for select marker, and leave another space at the end
-		maxlength := win.w - lnwidth - 2
-		// make extra space to separate windows if drawbox is not enabled
-		if !gOpts.drawbox {
-			maxlength -= 1
-		}
-
-		if w > maxlength {
-			s = runeSliceWidthRange(s, 0, maxlength-1)
-			s = append(s, []rune(gOpts.truncatechar)...)
-		} else {
-			for i := 0; i < maxlength-w; i++ {
-				s = append(s, ' ')
-			}
-		}
+		maxFilenameWidth := maxWidth - runeSliceWidth(s)
 
 		info := fileInfo(f, dir)
+		showInfo := len(info) > 0 && 2*len(info) < maxWidth
+		if showInfo {
+			maxFilenameWidth -= len(info)
+		}
 
-		if len(info) > 0 && 2*len(info) < maxlength {
-			if w+len(info) > maxlength {
-				s = runeSliceWidthRange(s, 0, maxlength-len(info)-1)
-				s = append(s, []rune(gOpts.truncatechar)...)
-			} else {
-				s = runeSliceWidthRange(s, 0, maxlength-len(info))
-			}
-			for _, r := range info {
-				s = append(s, r)
-			}
+		filename := []rune(f.Name())
+		if runeSliceWidth(filename) > maxFilenameWidth {
+			filename = runeSliceWidthRange(filename, 0, maxFilenameWidth-1)
+			filename = append(filename, []rune(gOpts.truncatechar)...)
+		}
+		for i := runeSliceWidth(filename); i < maxFilenameWidth; i++ {
+			filename = append(filename, ' ')
+		}
+		s = append(s, filename...)
+
+		if showInfo {
+			s = append(s, []rune(info)...)
 		}
 
 		ce := ""
@@ -664,10 +658,6 @@ func (ui *ui) echo(msg string) {
 	ui.msg = msg
 }
 
-func (ui *ui) echof(format string, a ...interface{}) {
-	ui.echo(fmt.Sprintf(format, a...))
-}
-
 func (ui *ui) echomsg(msg string) {
 	ui.msg = msg
 	log.Print(msg)
@@ -739,19 +729,21 @@ func (ui *ui) loadFileInfo(nav *nav) {
 		return
 	}
 
-	var linkTarget string
+	linkTargetArrow := ""
 	if curr.linkTarget != "" {
-		linkTarget = " -> " + curr.linkTarget
+		linkTargetArrow = "-> " + curr.linkTarget
 	}
 
-	ui.echof("%v %v%v%v%4s %v%s",
-		curr.Mode(),
-		linkCount(curr), // optional
-		userName(curr),  // optional
-		groupName(curr), // optional
-		humanize(curr.Size()),
-		curr.ModTime().Format(gOpts.timefmt),
-		linkTarget)
+	fileInfo := gOpts.statfmt
+	fileInfo = strings.Replace(fileInfo, "%p", curr.Mode().String(), -1)
+	fileInfo = strings.Replace(fileInfo, "%c", linkCount(curr), -1)
+	fileInfo = strings.Replace(fileInfo, "%u", userName(curr), -1)
+	fileInfo = strings.Replace(fileInfo, "%g", groupName(curr), -1)
+	fileInfo = strings.Replace(fileInfo, "%s", humanize(curr.Size()), -1)
+	fileInfo = strings.Replace(fileInfo, "%t", curr.ModTime().Format(gOpts.timefmt), -1)
+	fileInfo = strings.Replace(fileInfo, "%l", curr.linkTarget, -1)
+	fileInfo = strings.Replace(fileInfo, "%L", linkTargetArrow, -1)
+	ui.echo(fileInfo)
 }
 
 func (ui *ui) drawPromptLine(nav *nav) {
@@ -815,6 +807,18 @@ func (ui *ui) drawPromptLine(nav *nav) {
 	ui.promptWin.print(ui.screen, 0, 0, st, prompt)
 }
 
+func formatRulerOpt(name string, val string) string {
+	// handle escape character so it doesn't mess up the ruler
+	val = strings.ReplaceAll(val, "\033", "\033[7m\\033\033[0m")
+
+	// display name of builtin options for clarity
+	if !strings.HasPrefix(name, "lf_user_") {
+		val = fmt.Sprintf("%s=%s", strings.TrimPrefix(name, "lf_"), val)
+	}
+
+	return val
+}
+
 func (ui *ui) drawStatLine(nav *nav) {
 	st := tcell.StyleDefault
 
@@ -866,6 +870,7 @@ func (ui *ui) drawStatLine(nav *nav) {
 		progress = append(progress, fmt.Sprintf("[%d/%d]", nav.deleteCount, nav.deleteTotal))
 	}
 
+	opts := getOptsMap()
 	ruler := []string{}
 	for _, s := range gOpts.ruler {
 		switch s {
@@ -886,8 +891,11 @@ func (ui *ui) drawStatLine(nav *nav) {
 			}
 		case "ind":
 			ruler = append(ruler, fmt.Sprintf("%d/%d", ind, tot))
+		default:
+			if val, ok := opts[s]; ok {
+				ruler = append(ruler, formatRulerOpt(s, val))
+			}
 		}
-
 	}
 
 	ui.msgWin.printRight(ui.screen, 0, st, strings.Join(ruler, "  "))
@@ -1052,7 +1060,7 @@ func findBinds(keys map[string]expr, prefix string) (binds map[string]expr, ok b
 	return
 }
 
-func listBinds(binds map[string]expr) *bytes.Buffer {
+func listExprMap(binds map[string]expr, title string) *bytes.Buffer {
 	t := new(tabwriter.Writer)
 	b := new(bytes.Buffer)
 
@@ -1063,13 +1071,21 @@ func listBinds(binds map[string]expr) *bytes.Buffer {
 	sort.Strings(keys)
 
 	t.Init(b, 0, gOpts.tabstop, 2, '\t', 0)
-	fmt.Fprintln(t, "keys\tcommand")
+	fmt.Fprintf(t, "%s\tcommand\n", title)
 	for _, k := range keys {
 		fmt.Fprintf(t, "%s\t%v\n", k, binds[k])
 	}
 	t.Flush()
 
 	return b
+}
+
+func listBinds(binds map[string]expr) *bytes.Buffer {
+	return listExprMap(binds, "keys")
+}
+
+func listCmds() *bytes.Buffer {
+	return listExprMap(gOpts.cmds, "name")
 }
 
 func listJumps(jumps []string, ind int) *bytes.Buffer {
