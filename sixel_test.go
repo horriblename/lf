@@ -1,49 +1,63 @@
 package main
 
 import (
+	"strings"
 	"testing"
 )
 
-func TestTrimSixelHeight(t *testing.T) {
+func TestSixelSize(t *testing.T) {
 	tests := []struct {
-		si string
-		hi int
-		so string
-		ho int
+		si     string
+		hi     int
+		succ   bool
+		wo, ho int
 	}{
 		{
-			"\x1bPq\"1;1;1;12#0;2;97;97;97#1;2;75;75;75#0B$#1{\x1b\\", 12,
-			"\x1bPq\"1;1;1;12#0;2;97;97;97#1;2;75;75;75#0B$#1{\x1b\\", 6,
+			"\x1bP;;;q\"1;1;1;12#0;2;97;97;97#1;2;75;75;75#0B$#1{\x1b\\", 12,
+			true, 1, 6,
 		},
 		{
-			"\x1bPq\"1;1;1;12#0;2;97;97;97#1;2;75;75;75#0B$#1{-#0o$#1N\x1b\\", 30,
-			"\x1bPq\"1;1;1;12#0;2;97;97;97#1;2;75;75;75#0B$#1{-#0o$#1N\x1b\\", 12,
+			"\x1bP;;;q\"1;1;1;12#0;2;97;97;97#1;2;75;75;75#0B$#1{-#0o$#1N\x1b\\", 30,
+			true, 1, 12,
 		},
 		{
-			"\x1bPq\"1;1;1;12#0;2;97;97;97#1;2;75;75;75#0B$#1{-#0o$#1N\x1b\\", 12,
-			"\x1bPq\"1;1;1;12#0;2;97;97;97#1;2;75;75;75#0B$#1{-#0o$#1N\x1b\\", 12,
+			"\x1bP;;;q\"1;1;1;12#0;2;97;97;97#1;2;75;75;75#0B$#1{-#0o$#1N\x1b\\", 12,
+			true, 1, 12,
 		},
 		{
-			"\x1bPq\"1;1;1;12#0;2;97;97;97#1;2;75;75;75#0B$#1{-#0o$#1N\x1b\\", 11,
-			"\x1bPq\"1;1;1;6#0;2;97;97;97#1;2;75;75;75#0B$#1{-\x1b\\", 6,
+			"\x1bP;;;q\"1;1;1;12#0;2;97;97;97#1;2;75;75;75#0B$#1{-#0o$#1N\x1b\\", 11,
+			false, 0, 0,
 		},
 		{
-			"\x1bPq\"1;1;1;12#0;2;97;97;97#1;2;75;75;75#0B$#1{-#0o$#1N-\x1b\\", 30,
-			"\x1bPq\"1;1;1;12#0;2;97;97;97#1;2;75;75;75#0B$#1{-#0o$#1N-\x1b\\", 12,
+			"\x1bP;;;q\"1;1;1;12#0;2;97;97;97#1;2;75;75;75#0B$#1{-#0o$#1N-\x1b\\", 30,
+			true, 1, 12,
 		},
 		{
-			"\x1bPq\"1;1;1;12#0;2;97;97;97#1;2;75;75;75#0B$#1{-#0o$#1N-\x1b\\", 12,
-			"\x1bPq\"1;1;1;12#0;2;97;97;97#1;2;75;75;75#0B$#1{-#0o$#1N-\x1b\\", 12,
+			"\x1bP;;;q\"1;1;1;12#0;2;97;97;97#1;2;75;75;75#0B$#1{-#0o$#1N-\x1b\\", 12,
+			true, 1, 12,
 		},
 		{
-			"\x1bPq\"1;1;1;12#0;2;97;97;97#1;2;75;75;75#0B$#1{-#0o$#1N-\x1b\\", 11,
-			"\x1bPq\"1;1;1;6#0;2;97;97;97#1;2;75;75;75#0B$#1{-\x1b\\", 6,
+			"\x1bP;;;q\"1;1;1;12#0;2;97;97;97#1;2;75;75;75#0B$#1{-#0o$#1N-\x1b\\", 11,
+			false, 0, 0,
 		},
 	}
 
 	for i, test := range tests {
-		if got1, got2, _ := trimSixelHeight(test.si, test.hi); got1 != test.so || got2 != test.ho {
-			t.Errorf("test #%d expected height %d, got %d and string %s", i, test.ho, got2, got1[1:])
+		reader := strings.NewReader(test.si)
+		w, h, err := sixelSize(reader, test.hi)
+
+		if !test.succ {
+			if err == nil {
+				t.Errorf("test #%d expected to fail", i)
+			}
+			continue
+		} else if err != nil {
+			t.Errorf("test #%d failed with error %s", i, err)
+			continue
+		}
+
+		if w != test.wo || h != test.ho {
+			t.Errorf("test #%d expected (%d, %d), got (%d, %d)", i, test.wo, test.ho, w, h)
 		}
 	}
 
