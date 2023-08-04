@@ -823,16 +823,14 @@ func (nav *nav) preview(path string, sxScreen *sixelScreen, win *win) {
 
 	buf := bufio.NewScanner(reader)
 
-	for len(reg.lines) < win.h && buf.Scan() {
-		text := buf.Text()
-		for _, r := range text {
+	for i := 0; i < win.h && buf.Scan(); i++ {
+		for _, r := range buf.Text() {
 			if r == 0 {
 				reg.lines = []string{"\033[7mbinary\033[0m"}
 				return
 			}
 		}
-
-		reg.lines = append(reg.lines, text)
+		reg.lines = append(reg.lines, buf.Text())
 	}
 
 	if buf.Err() != nil {
