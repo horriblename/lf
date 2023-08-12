@@ -1,5 +1,9 @@
 # LF-sixel
 
+## Important Note
+
+the [sixel PR](https://github.com/gokcehan/lf/pull/1211) has been merged upstream, go use that. If you were previously using this fork, just `set sixel true` and no other change is needed
+
 This is a fork of [lf](https://github.com/gokcehan/lf) with support for [sixel](https://wikipedia.org/wiki/Sixel) graphics.
 
 Sixel support requires a sixel-capable terminal and is only available on Unix systems (only tested on Linux but BSD distributions and MacOS should work).
