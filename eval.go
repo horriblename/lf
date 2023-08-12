@@ -230,6 +230,8 @@ func (e *setExpr) eval(app *app, args []string) {
 			app.nav.regCache = make(map[string]*reg)
 		}
 		app.ui.loadFile(app, true)
+	case "dupfilefmt":
+		gOpts.dupfilefmt = e.val
 	case "errorfmt":
 		gOpts.errorfmt = e.val
 	case "filesep":
@@ -609,12 +611,14 @@ func (e *setExpr) eval(app *app, args []string) {
 			app.ui.echoerr("preview: value should be empty, 'true', or 'false'")
 			return
 		}
+		app.ui.loadFile(app, true)
 	case "nopreview":
 		if e.val != "" {
 			app.ui.echoerrf("nopreview: unexpected value: %s", e.val)
 			return
 		}
 		gOpts.preview = false
+		app.ui.loadFile(app, true)
 	case "preview!":
 		if e.val != "" {
 			app.ui.echoerrf("preview!: unexpected value: %s", e.val)
@@ -625,6 +629,7 @@ func (e *setExpr) eval(app *app, args []string) {
 			return
 		}
 		gOpts.preview = !gOpts.preview
+		app.ui.loadFile(app, true)
 	case "previewer":
 		gOpts.previewer = replaceTilde(e.val)
 	case "promptfmt":
@@ -831,6 +836,17 @@ func (e *setExpr) eval(app *app, args []string) {
 		}
 
 		gOpts.truncatechar = e.val
+	case "truncatepct":
+		n, err := strconv.Atoi(e.val)
+		if err != nil {
+			app.ui.echoerrf("truncatepct: %s", err)
+			return
+		}
+		if n < 0 || n > 100 {
+			app.ui.echoerrf("truncatepct: must be between 0 and 100 (both inclusive), got %d", n)
+			return
+		}
+		gOpts.truncatepct = n
 	case "waitmsg":
 		gOpts.waitmsg = e.val
 	case "wrapscan":
@@ -1745,7 +1761,7 @@ func (e *callExpr) eval(app *app, args []string) {
 			return
 		}
 		app.nav.renew()
-		app.ui.loadFile(app, true)
+		app.ui.loadFile(app, false)
 	case "reload":
 		if !app.nav.init {
 			return
@@ -2143,7 +2159,7 @@ func (e *callExpr) eval(app *app, args []string) {
 		app.menuCompActive = false
 	case "cmd-enter":
 		s := string(append(app.ui.cmdAccLeft, app.ui.cmdAccRight...))
-		if len(s) == 0 && app.ui.cmdPrefix != "filter: " {
+		if len(s) == 0 && app.ui.cmdPrefix != "filter: " && app.ui.cmdPrefix != ">" {
 			return
 		}
 

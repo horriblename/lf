@@ -130,6 +130,7 @@ The following options can be used to customize the behavior of lf:
 	dironly          bool      (default false)
 	dirpreviews      bool      (default false)
 	drawbox          bool      (default false)
+	dupfilefmt       string    (default '%f.~%n~')
 	errorfmt         string    (default "\033[7;31;47m")
 	filesep          string    (default "\n")
 	findlen          int       (default 1)
@@ -166,12 +167,13 @@ The following options can be used to customize the behavior of lf:
 	smartcase        bool      (default true)
 	smartdia         bool      (default false)
 	sortby           string    (default 'natural')
-	statfmt          string    (default "\033[36m%p\033[0m %c %u %g %s %t %L")
+	statfmt          string    (default "\033[36m%p\033[0m| %c| %u| %g| %s| %t| -> %l")
 	tabstop          int       (default 8)
 	tagfmt           string    (default "\033[31m")
 	tempmarks        string    (default '')
 	timefmt          string    (default 'Mon Jan _2 15:04:05 2006')
 	truncatechar     string    (default '~')
+	truncatepct      int       (default 100)
 	waitmsg          string    (default 'Press any key to continue')
 	wrapscan         bool      (default true)
 	wrapscroll       bool      (default false)
@@ -287,16 +289,24 @@ History file should be located at:
 	Unix     ~/.local/share/lf/history
 	Windows  C:\Users\<user>\AppData\Local\lf\history
 
-You can configure the default values of following variables to change these locations:
+You can configure these locations with the following variables given with their order of precedences and their default values:
 
 	Unix
-	    $XDG_CONFIG_HOME  ~/.config
-	    $XDG_DATA_HOME    ~/.local/share
+	    $LF_CONFIG_HOME
+	    $XDG_CONFIG_HOME
+	    ~/.config
+
+	    $LF_DATA_HOME
+	    $XDG_DATA_HOME
+	    ~/.local/share
 
 	Windows
-	    %ProgramData%     C:\ProgramData
-	    %LOCALAPPDATA%    C:\Users\<user>\AppData\Local
-	    %LF_CONFIG_HOME%  If set, use this value instead of %LOCALAPPDATA%
+	    %ProgramData%
+	    C:\ProgramData
+
+	    %LF_CONFIG_HOME%
+	    %LOCALAPPDATA%
+	    C:\Users\<user>\AppData\Local
 
 A sample configuration file can be found at
 https://github.com/gokcehan/lf/blob/master/etc/lfrc.example
@@ -663,8 +673,8 @@ Format string of the box drawing characters enabled by the `drawbox` option.
 Set the path of a cleaner file.
 The file should be executable.
 This file is called if previewing is enabled, the previewer is set, and the previously selected file had its preview cache disabled.
-Five arguments are passed to the file, (1) current file name, (2) width, (3) height, (4) horizontal position, and (5) vertical position of preview pane respectively.
-Preview clearing is disabled when the value of this option is left empty.
+The following arguments are passed to the file, (1) current file name, (2) width, (3) height, (4) horizontal position, (5) vertical position of preview pane and (6) next file name to be previewed respectively.
+Preview cleaning is disabled when the value of this option is left empty.
 
 	cursoractivefmt   string    (default "\033[7m")
 	cursorparentfmt   string    (default "\033[7m")
@@ -709,6 +719,11 @@ If enabled, directories will also be passed to the previewer script. This allows
 	drawbox        bool      (default false)
 
 Draw boxes around panes with box drawing characters.
+
+	dupfilefmt        string      (default '%f.~%n~')
+
+Format string of file name when creating duplicate files. With the default format, copying a file `abc.txt` to the same directory will result in a duplicate file called `abc.txt.~1~`.
+Special expansions are provided, '%f' as the file name, '%b' for basename (file name without extension), '%e' as the extension (including the dot) and '%n' as the number of duplicates.
 
 	errorfmt       string    (default "\033[7;31;47m")
 
@@ -829,7 +844,7 @@ Files containing the null character (U+0000) in the read portion are considered 
 
 Set the path of a previewer file to filter the content of regular files for previewing.
 The file should be executable.
-Five arguments are passed to the file, (1) current file name, (2) width, (3) height, (4) horizontal position, and (5) vertical position of preview pane respectively.
+The following arguments are passed to the file, (1) current file name, (2) width, (3) height, (4) horizontal position, and (5) vertical position of preview pane respectively.
 SIGPIPE signal is sent when enough lines are read.
 If the previewer returns a non-zero exit code, then the preview cache for the given file is disabled.
 This means that if the file is selected in the future, the previewer is called once again.
@@ -910,11 +925,11 @@ This option has no effect when 'ignoredia' is disabled.
 Sort type for directories.
 Currently supported sort types are 'natural', 'name', 'size', 'time', 'ctime', 'atime', and 'ext'.
 
-	statfmt    string    (default "\033[36m%p\033[0m %c %u %g %s %t %L")
+	statfmt    string        (default "\033[36m%p\033[0m| %c| %u| %g| %s| %t| -> %l")
 
 Format string of the file info shown in the bottom left corner.
-Special expansions are provided, '%p' as the file permissions, '%c' as the link count, '%u' as the user, '%g' as the group, '%s' as the file size, '%t' as the last modified time, and '%l' as the link target if it exists (otherwise a blank string). '%L' is the same as '%l' but with an arrow '-> ' prepended.
-On Windows, the link count, user and group fields are not supported and will be replaced with a blank string if specified. The default for Windows is "\033[36m%p\033[0m %s %t %L".
+Special expansions are provided, '%p' as the file permissions, '%c' as the link count, '%u' as the user, '%g' as the group, '%s' as the file size, '%t' as the last modified time, and '%l' as the link target.
+The `|` character splits the format string into sections. Any section containing a failed expansion (result is a blank string) is discarded and not shown.
 
 	tabstop        int       (default 8)
 
@@ -940,6 +955,23 @@ Format string of the file modification time shown in the bottom line.
 	truncatechar   string    (default '~')
 
 Truncate character shown at the end when the file name does not fit to the pane.
+
+	truncatepct  int       (default 100)
+
+When a filename is too long to be shown completely, the available space is
+partitioned in two pieces. truncatepct defines a fraction (in percent
+between 0 and 100) for the size of the first piece, which will show the
+beginning of the filename. The second piece will show the end of the filename
+and will use the rest of the available space. Both pieces are separated by the
+truncation character (truncatechar).
+A value of 100 will only show the beginning of the filename,
+while a value of 0 will only show the end of the filename, e.g.:
+
+- `set truncatepct 100` -> "very-long-filename-tr~" (default)
+
+- `set truncatepct 50`  -> "very-long-f~-truncated"
+
+- `set truncatepct 0`   -> "~ng-filename-truncated"
 
 	waitmsg        string    (default 'Press any key to continue')
 
@@ -1533,15 +1565,17 @@ There is a special command 'on-cd' that runs a shell command when it is defined 
 You can define it just as you would define any other command:
 
 	cmd on-cd &{{
+	    bash -c '
 	    # display git repository status in your prompt
 	    source /usr/share/git/completion/git-prompt.sh
 	    GIT_PS1_SHOWDIRTYSTATE=auto
 	    GIT_PS1_SHOWSTASHSTATE=auto
 	    GIT_PS1_SHOWUNTRACKEDFILES=auto
 	    GIT_PS1_SHOWUPSTREAM=auto
-	    git=$(__git_ps1 " (%s)") || true
+	    git=$(__git_ps1 " (%s)")
 	    fmt="\033[32;1m%u@%h\033[0m:\033[34;1m%d\033[0m\033[1m%f$git\033[0m"
 	    lf -remote "send $id set promptfmt \"$fmt\""
+	    '
 	}}
 
 If you want to print escape sequences, you may redirect 'printf' output to '/dev/tty'.

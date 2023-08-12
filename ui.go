@@ -475,8 +475,11 @@ func (win *win) printDir(screen tcell.Screen, dir *dir, context *dirContext, dir
 
 		filename := []rune(f.Name())
 		if runeSliceWidth(filename) > maxFilenameWidth {
-			filename = runeSliceWidthRange(filename, 0, maxFilenameWidth-1)
+			truncatePos := (maxFilenameWidth - 1) * gOpts.truncatepct / 100
+			lastPart := runeSliceWidthLastRange(filename, maxFilenameWidth-truncatePos-1)
+			filename = runeSliceWidthRange(filename, 0, truncatePos)
 			filename = append(filename, []rune(gOpts.truncatechar)...)
+			filename = append(filename, lastPart...)
 		}
 		for i := runeSliceWidth(filename); i < maxFilenameWidth; i++ {
 			filename = append(filename, ' ')
@@ -704,12 +707,12 @@ func (ui *ui) loadFile(app *app, volatile bool) {
 		onSelect(app)
 	}
 
-	if !gOpts.preview {
-		return
-	}
-
 	if volatile {
 		app.nav.previewChan <- ""
+	}
+
+	if !gOpts.preview {
+		return
 	}
 
 	if curr.IsDir() {
@@ -729,20 +732,28 @@ func (ui *ui) loadFileInfo(nav *nav) {
 		return
 	}
 
-	linkTargetArrow := ""
-	if curr.linkTarget != "" {
-		linkTargetArrow = "-> " + curr.linkTarget
+	statfmt := strings.ReplaceAll(gOpts.statfmt, "|", "\x1f")
+	replace := func(s string, val string) {
+		if val == "" {
+			val = "\x00"
+		}
+		statfmt = strings.ReplaceAll(statfmt, s, val)
+	}
+	replace("%p", curr.Mode().String())
+	replace("%c", linkCount(curr))
+	replace("%u", userName(curr))
+	replace("%g", groupName(curr))
+	replace("%s", humanize(curr.Size()))
+	replace("%t", curr.ModTime().Format(gOpts.timefmt))
+	replace("%l", curr.linkTarget)
+
+	fileInfo := ""
+	for _, section := range strings.Split(statfmt, "\x1f") {
+		if !strings.Contains(section, "\x00") {
+			fileInfo += section
+		}
 	}
 
-	fileInfo := gOpts.statfmt
-	fileInfo = strings.Replace(fileInfo, "%p", curr.Mode().String(), -1)
-	fileInfo = strings.Replace(fileInfo, "%c", linkCount(curr), -1)
-	fileInfo = strings.Replace(fileInfo, "%u", userName(curr), -1)
-	fileInfo = strings.Replace(fileInfo, "%g", groupName(curr), -1)
-	fileInfo = strings.Replace(fileInfo, "%s", humanize(curr.Size()), -1)
-	fileInfo = strings.Replace(fileInfo, "%t", curr.ModTime().Format(gOpts.timefmt), -1)
-	fileInfo = strings.Replace(fileInfo, "%l", curr.linkTarget, -1)
-	fileInfo = strings.Replace(fileInfo, "%L", linkTargetArrow, -1)
 	ui.echo(fileInfo)
 }
 
@@ -980,24 +991,18 @@ func (ui *ui) draw(nav *nav) {
 		ui.drawStatLine(nav)
 		ui.screen.HideCursor()
 	case ">":
-		prefix := ui.cmdPrefix[:min(ui.msgWin.w-1, len(ui.cmdPrefix))]
-		pos := min(runeSliceWidth(ui.cmdAccLeft), ui.msgWin.w-len(prefix)-1)
-		left := ui.cmdAccLeft[runeSliceWidth(ui.cmdAccLeft)-pos:]
-		right := ui.cmdAccRight
-		ui.msgWin.printLine(ui.screen, 0, 0, st, prefix)
-		ui.msgWin.print(ui.screen, len(prefix), 0, st, ui.msg)
-		ui.msgWin.print(ui.screen, len(prefix)+printLength(ui.msg), 0, st, string(left))
-		ui.msgWin.print(ui.screen, len(prefix)+printLength(ui.msg)+runeSliceWidth(left), 0, st, string(right))
-		ui.screen.ShowCursor(ui.msgWin.x+len(prefix)+printLength(ui.msg)+runeSliceWidth(left), ui.msgWin.y)
+		maxWidth := ui.msgWin.w - 1 // leave space for cursor at the end
+		prefix := runeSliceWidthRange([]rune(ui.cmdPrefix), 0, maxWidth)
+		left := runeSliceWidthLastRange(ui.cmdAccLeft, maxWidth-runeSliceWidth(prefix)-printLength(ui.msg))
+		ui.msgWin.printLine(ui.screen, 0, 0, st, string(prefix)+ui.msg)
+		ui.msgWin.print(ui.screen, runeSliceWidth(prefix)+printLength(ui.msg), 0, st, string(left)+string(ui.cmdAccRight))
+		ui.screen.ShowCursor(ui.msgWin.x+runeSliceWidth(prefix)+printLength(ui.msg)+runeSliceWidth(left), ui.msgWin.y)
 	default:
-		prefix := ui.cmdPrefix[:min(ui.msgWin.w-1, len(ui.cmdPrefix))]
-		pos := min(runeSliceWidth(ui.cmdAccLeft), ui.msgWin.w-len(prefix)-1)
-		left := ui.cmdAccLeft[runeSliceWidth(ui.cmdAccLeft)-pos:]
-		right := ui.cmdAccRight
-		ui.msgWin.printLine(ui.screen, 0, 0, st, prefix)
-		ui.msgWin.print(ui.screen, len(prefix), 0, st, string(left))
-		ui.msgWin.print(ui.screen, len(prefix)+runeSliceWidth(left), 0, st, string(right))
-		ui.screen.ShowCursor(ui.msgWin.x+len(prefix)+runeSliceWidth(left), ui.msgWin.y)
+		maxWidth := ui.msgWin.w - 1 // leave space for cursor at the end
+		prefix := runeSliceWidthRange([]rune(ui.cmdPrefix), 0, maxWidth)
+		left := runeSliceWidthLastRange(ui.cmdAccLeft, maxWidth-runeSliceWidth(prefix))
+		ui.msgWin.printLine(ui.screen, 0, 0, st, string(prefix)+string(left)+string(ui.cmdAccRight))
+		ui.screen.ShowCursor(ui.msgWin.x+runeSliceWidth(prefix)+runeSliceWidth(left), ui.msgWin.y)
 	}
 
 	if gOpts.preview {
