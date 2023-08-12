@@ -1,8 +1,10 @@
 # LF-sixel
 
-## Important Note
+## ⚠️ Important Note ⚠️
 
 the [sixel PR](https://github.com/gokcehan/lf/pull/1211) has been merged upstream, go use that. If you were previously using this fork, just `set sixel true` and no other change is needed
+
+---
 
 This is a fork of [lf](https://github.com/gokcehan/lf) with support for [sixel](https://wikipedia.org/wiki/Sixel) graphics.
 
