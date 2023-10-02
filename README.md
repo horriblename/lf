@@ -2,7 +2,7 @@
 
 ## ⚠️ Important Note ⚠️
 
-the [sixel PR](https://github.com/gokcehan/lf/pull/1211) has been merged upstream, go use that. If you were previously using this fork, just `set sixel true` and no other change is needed
+the [sixel PR](https://github.com/gokcehan/lf/pull/1211) has been merged upstream (since r31), go use that. If you were previously using this fork, just `set sixel true` and no other change is needed, if you have trouble with migrating from this fork, open an issue here.
 
 ---
 
