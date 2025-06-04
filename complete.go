@@ -81,6 +81,7 @@ var (
 		"tag",
 		"tag-toggle",
 		"tty-write",
+		"custominfo",
 		"cmd-escape",
 		"cmd-complete",
 		"cmd-menu-complete",

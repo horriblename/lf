@@ -6,6 +6,7 @@ import (
 	"io"
 	"log"
 	"os"
+	"path"
 	"path/filepath"
 	"slices"
 	"strconv"
@@ -2243,6 +2244,31 @@ func (e *callExpr) eval(app *app, args []string) {
 			[]rune(string(app.ui.cmdAccLeft)[end2:]),
 		)
 		update(app)
+	case "custominfo":
+		if len(e.args) != 1 {
+			app.ui.echoerr("custominfo: expected 1 argument")
+			return
+		}
+		toks := strings.SplitN(e.args[0], ":", 3)
+		if len(toks) != 3 {
+			app.ui.echoerr("custominfo: should give arg in the form of '/path/to/file:custom_<name>:<info_string>'")
+			return
+		}
+
+		// TODO: should I check dir validity first?
+		dirname := path.Dir(toks[0])
+		base := path.Base(toks[0])
+		dir := app.nav.loadDir(dirname)
+		for _, f := range dir.allFiles {
+			if f.Name() == base {
+				// FIXME: file is created in a couple of places, and customInfo might
+				// be nil here
+				f.customInfo[toks[1]] = toks[2]
+				return
+			}
+		}
+		// TODO: warn?
+
 	default:
 		cmd, ok := gOpts.cmds[e.name]
 		if !ok {

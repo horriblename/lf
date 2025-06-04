@@ -58,6 +58,7 @@ func newFile(path string) *file {
 			changeTime: time.Unix(0, 0),
 			ext:        "",
 			err:        err,
+			customInfo: map[string]string{},
 		}
 	}
 
@@ -117,6 +118,7 @@ func newFile(path string) *file {
 		changeTime: ct,
 		ext:        getFileExtension(lstat),
 		err:        nil,
+		customInfo: map[string]string{},
 	}
 }
 
