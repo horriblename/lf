@@ -270,8 +270,10 @@ func (e *setExpr) eval(app *app, args []string) {
 			switch s {
 			case "size", "time", "atime", "ctime", "perm", "user", "group":
 			default:
-				app.ui.echoerr("info: should consist of 'size', 'time', 'atime', 'ctime', 'perm', 'user' or 'group' separated with colon")
-				return
+				if !strings.HasPrefix(s, "custom_") {
+					app.ui.echoerr("info: should consist of 'size', 'time', 'atime', 'ctime', 'perm', 'user', 'group', or 'custom_<name>' separated with colon")
+					return
+				}
 			}
 		}
 		gOpts.info = toks
@@ -504,8 +506,10 @@ func (e *setLocalExpr) eval(app *app, args []string) {
 			switch s {
 			case "size", "time", "atime", "ctime", "perm", "user", "group":
 			default:
-				app.ui.echoerr("info: should consist of 'size', 'time', 'atime', 'ctime', 'perm', 'user' or 'group' separated with colon")
-				return
+				if !strings.HasPrefix(s, "custom_") {
+					app.ui.echoerr("info: should consist of 'size', 'time', 'atime', 'ctime', 'perm', 'user', 'group', or 'custom_<name>' separated with colon")
+					return
+				}
 			}
 		}
 		gLocalOpts.info[e.path] = toks
