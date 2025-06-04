@@ -39,6 +39,7 @@ type file struct {
 	changeTime time.Time
 	ext        string
 	err        error
+	customInfo map[string]string
 }
 
 func newFile(path string) *file {

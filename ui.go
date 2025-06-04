@@ -329,7 +329,15 @@ func fileInfo(f *file, d *dir, userWidth int, groupWidth int) string {
 		case "group":
 			fmt.Fprintf(&info, " %-*s", groupWidth, groupName(f.FileInfo))
 		default:
-			log.Printf("unknown info type: %s", s)
+			if !strings.HasPrefix(s, "custom_") {
+				log.Printf("unknown info type: %s", s)
+				continue
+			}
+
+			s, ok := f.customInfo[s]
+			if ok {
+				fmt.Fprintf(&info, " %s", s)
+			}
 		}
 	}
 
